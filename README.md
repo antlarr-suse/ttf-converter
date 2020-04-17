@@ -23,7 +23,7 @@ The generated file will have the name of the font family and style.
 If you want to convert all fonts in a directory, use it like:
 
  ```
- ttf-converter --input-directory /usr/share/fonts/Type1 --output-directory generated
+ ttf-converter --input-dir /usr/share/fonts/Type1 --output-dir generated
  ```
  
  That will read all *.pfa/*.pfb files in the `/usr/share/fonts/Type1`
