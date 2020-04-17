@@ -1,0 +1,180 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+#
+# (C) 2020 Antonio Larrosa <alarrosa@suse.com>
+# Licensed under a GPL v3.0 license
+#
+import fontforge
+import sys
+import os.path
+import argparse
+import math
+from glob import glob
+
+
+class SkipFont(Exception):
+    pass
+
+
+def fix_duplicated_unicode_points(font):
+    seen = {}
+    glyphs_to_remove = []
+    for idx, glyph in enumerate(font.glyphs()):
+        if glyph.unicode == -1:
+            continue
+        if glyph.unicode in seen:
+            prev_idx, prev_glyphname = seen[glyph.unicode]
+            print(f'Unicode point {hex(glyph.unicode)} '
+                  f'at position {idx} ({glyph.glyphname}) is duplicated at '
+                  f'position {prev_idx} ({prev_glyphname})')
+            glyphs_to_remove.append(glyph)
+
+        seen[glyph.unicode] = (idx, glyph.glyphname)
+
+    for glyph in glyphs_to_remove:
+        print(f'Removing glyph {glyph.glyphname}')
+        font.removeGlyph(glyph)
+
+
+def fix_font(font):
+    good_em = 2 ** math.ceil(math.log(font.em, 2))
+    if font.em != good_em:
+        print(f'Setting font em size to {good_em} (was {font.em}): '
+              'TrueType needs em to be a power of 2')
+        font.em = good_em
+
+    state = font.validate()
+
+    if state & 0x400000:
+        print('Font has duplicated unicode points')
+        print(f'Font contains {len(list(font.glyphs()))} glyphs')
+        fix_duplicated_unicode_points(font)
+        state = font.validate(True)
+        print(f'Font now contains {len(list(font.glyphs()))} glyphs')
+
+    # All bitmask values at https://fontforge.org/docs/scripting/python/fontforge.html#fontforge.glyph.validation_state  # noqa
+    validate_mask = 1  # Glyph has been validated
+    validate_mask |= 0x4  # Glyph intersects itself somewhere
+    validate_mask |= 0x20  # Missing extrema points should be ignored if we already tried to add them  # noqa
+    validate_mask |= 0x800000  # Overlapped hints
+
+    for idx, glyph in enumerate(font.glyphs()):
+        glyph.validate()
+        if glyph.validation_state & 0x8:
+            print(f'Font glyph "{glyph.glyphname}" ({idx}) has at least one '
+                  'contour in wrong direction... ', end='')
+            glyph.correctDirection()
+            glyph.validate(True)
+            if glyph.validation_state & 0x8:
+                print('Error')
+                msg = (f'Font glyph "{glyph.glyphname}" ({idx}) '
+                       'doesn\'t validate: Contour in wrong direction')
+                raise ValueError(msg)
+            else:
+                print('Fixed')
+
+        if glyph.validation_state & 0x20:
+            print(f'Font glyph "{glyph.glyphname}" ({idx}) is missing '
+                  'extrema. Adding points... ', end='')
+            for mode in ('only_good_rm', 'all'):
+                glyph.addExtrema('only_good_rm')
+                glyph.validate(True)
+                if not glyph.validation_state & 0x20:
+                    break
+            else:
+                print('Error')
+                msg = (f'Font glyph "{glyph.glyphname}" ({idx}) '
+                       'doesn\'t validate: Missing extrema')
+                # raise ValueError(msg)
+            print('Fixed')
+
+        if glyph.validation_state & 0x80000:
+            print(f'Font glyph "{glyph.glyphname}" ({idx}) has non-integral '
+                  'points. Rounding... ', end='')
+            for factor in (1000, 100, 10, 1):
+                glyph.round(factor)
+                glyph.validate(True)
+                if not glyph.validation_state & 0x80000:
+                    break
+            else:
+                print('Error')
+                msg = (f'Font glyph "{glyph.glyphname}" ({idx}) '
+                       'doesn\'t validate: Points non-integral')
+                raise ValueError(msg)
+            print(f'Fixed (factor {factor})')
+
+        if glyph.validation_state & ~validate_mask:
+            msg = (f'Font glyph {idx} ({glyph.glyphname}) doesn\'t validate: '
+                   f'{hex(glyph.validation_state)}')
+            if glyph.validation_state == 0x3:
+                raise SkipFont('Bad glyf or loca table')
+            raise ValueError(msg)
+
+    return True
+
+
+def convert_font(input_filename, output_filename=None, output_dir='.'):
+    font = fontforge.open(input_filename)
+
+    if not output_filename:
+        output_filename = font.fontname + '.ttf'
+
+    if output_dir:
+        output_filename = os.path.join(output_dir, output_filename)
+
+    print(f'Converting {input_filename} to {output_filename}')
+
+    fix_font(font)
+
+    font.generate(output_filename, flags=("opentype",))
+
+    print('ok')
+
+
+def get_input_files_from_directory(directory):
+    return glob(os.path.join(directory, '*.pf[ab]'))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="This script converts fonts "
+                                     "to ttf format")
+    parser.add_argument('--input-dir', default=None,
+                        help='Read fonts to convert from all *.pf[ab] files '
+                        'in this directory')
+    parser.add_argument('--output-dir', default='.',
+                        help='Output directory for generated files')
+    parser.add_argument('input_files', nargs='*', default=[],
+                        help='Input files')
+
+    args = parser.parse_args()
+
+    input_files = set(args.input_files)
+    if args.input_dir:
+        input_files.update(get_input_files_from_directory(args.input_dir))
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    if not os.path.isdir(args.output_dir):
+        print(f'Output directory argument {args.output_dir} '
+              'is not a directory')
+        sys.exit(1)
+
+    skipped_filenames = []
+    for input_file in sorted(input_files):
+        print('--------')
+        try:
+            convert_font(input_file,
+                         output_dir=args.output_dir)
+        except SkipFont:
+            print(f'Skipping font {input_file}')
+            skipped_filenames.append(input_file)
+
+    if skipped_filenames:
+        print('--------')
+        print('Files that were not converted:')
+        for filename in skipped_filenames:
+            print(filename)
+
+
+if __name__ == '__main__':
+    main()
