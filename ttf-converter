@@ -126,6 +126,34 @@ def fix_font(font):
 
     return True
 
+def fix_subfamily(font):
+    sfnt_names = list(font.sfnt_names)
+    subfamily_index = [x[1] for x in sfnt_names].index('SubFamily')
+    translations = {'BoldCondItal': 'Bold Condensed Italic',
+                    'BoldItal': 'Bold Italic',
+                    'BoldItalic': 'Bold Italic',
+                    'BoldOblique': 'Bold Oblique',
+                    'BookObli': 'Book Oblique',
+                    'DemiObli': 'Demi Oblique',
+                    'DemiBold': 'Demi Bold',
+                    'DemiBoldItal': 'Demi Bold Italic',
+                    'LighItal': 'Light Italic',
+                    'MediItal': 'Medium Italic',
+                    'ReguCond': 'Regular Condensed',
+                    'ReguCondItal': 'Regular Condensed Italic',
+                    'ReguItal': 'Regular Italic',
+                    'ReguObli': 'Regular Oblique',
+                    'StandardSymL': 'Regular'}  # This is for the Standard Symbols L font
+    try:
+        new_value = translations[sfnt_names[subfamily_index][2]]
+    except KeyError:
+        # Nothing to fix
+        return
+
+    print(f'Fixing subfamily: Renaming {sfnt_names[subfamily_index][2]} to {new_value}.')
+    sfnt_names[subfamily_index] = sfnt_names[subfamily_index][0:2] + (new_value,)
+    font.sfnt_names = tuple(sfnt_names)
+
 
 def convert_font(input_filename, output_filename=None, output_dir='.'):
     font = fontforge.open(input_filename)
@@ -139,6 +167,8 @@ def convert_font(input_filename, output_filename=None, output_dir='.'):
     print(f'Converting {input_filename} to {output_filename}')
 
     fix_font(font)
+
+    fix_subfamily(font)
 
     font.generate(output_filename, flags=("opentype",))
 
