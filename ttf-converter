@@ -259,6 +259,7 @@ def main():
                         help='Output directory for generated files')
     parser.add_argument('input_files', nargs='*', default=[],
                         help='Input files')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.2')
 
     args = parser.parse_args()
 
