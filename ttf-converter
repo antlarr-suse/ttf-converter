@@ -167,8 +167,6 @@ def fix_monospaced_font(font):
     wrong_width_glyphs = [x for x in glyphs if x.width != max_width]
     wrong_width_count = len(wrong_width_glyphs)
 
-    import pdb
-    pdb.set_trace()
     if wrong_width_count == 0:
         print('This is a Monospaced font.')
     else:
