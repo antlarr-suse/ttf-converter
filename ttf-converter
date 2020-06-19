@@ -23,6 +23,7 @@ import sys
 import os.path
 import argparse
 import math
+import psMat
 from glob import glob
 
 
@@ -160,6 +161,65 @@ def fix_subfamily(font):
     font.sfnt_names = tuple(sfnt_names)
 
 
+def fix_monospaced_font(font):
+    glyphs = list(font.glyphs())
+    max_width = max(x.width for x in glyphs)
+    wrong_width_glyphs = [x for x in glyphs if x.width != max_width]
+    wrong_width_count = len(wrong_width_glyphs)
+
+    import pdb
+    pdb.set_trace()
+    if wrong_width_count == 0:
+        print('This is a Monospaced font.')
+    else:
+        bad_glyph = wrong_width_glyphs[0]
+        if (wrong_width_count == 1 and
+            bad_glyph.unicode == -1 and
+                bad_glyph.glyphname == '.null'):
+            print('This is a Monospaced font with a .null bad glyph. '
+                  'Fixing...')
+            font.removeGlyph(bad_glyph)
+        else:
+            print('This is a Monospaced font except for '
+                  '{wrong_width_count} glyphs')
+            if wrong_width_count <= 5:
+                for glyph in wrong_width_glyphs:
+                    print(f'{glyph.glyphname} ({glyph.unicode}): '
+                          '{glyph.width}')
+
+
+def force_monospaced_font(font):
+    glyphs = list(font.glyphs())
+    widths = [x.width for x in glyphs]
+    width = max(set(widths), key=widths.count)
+
+    try:
+        _null = [x for x in glyphs if x.glyphname == '.null'][0]
+    except IndexError:
+        _null = font.createChar(-1, '.null')
+        _null.width = width
+    glyphs = list(font.glyphs())
+    for idx, glyph in enumerate(glyphs):
+        if glyph.glyphname in ('.notdef', '.null', 'nonmarkingreturn'):
+            glyph.width = width
+            continue
+        if glyph.width == width:
+            print(f'Width of {glyph.glyphname} is ok')
+            continue
+        print(f'Fixing width of {glyph.glyphname} from {glyph.width} to ',
+              end='')
+        glyph.transform(psMat.scale(width/glyph.width))
+        print(f'{glyph.width}... done')
+
+
+def should_be_forced_monospaced(font):
+    try:
+        family = [x[2] for x in font.sfnt_names if x[1] == 'Family'][0]
+    except IndexError:
+        return False
+    return family == 'Nimbus Mono L'
+
+
 def convert_font(input_filename, output_filename=None, output_dir='.'):
     font = fontforge.open(input_filename)
 
@@ -174,6 +234,11 @@ def convert_font(input_filename, output_filename=None, output_dir='.'):
     fix_font(font)
 
     fix_subfamily(font)
+
+    if should_be_forced_monospaced(font):
+        force_monospaced_font(font)
+    else:
+        fix_monospaced_font(font)
 
     font.generate(output_filename, flags=("opentype",))
 
