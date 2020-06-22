@@ -131,7 +131,8 @@ def fix_font(font):
 def fix_subfamily(font):
     sfnt_names = list(font.sfnt_names)
     subfamily_index = [x[1] for x in sfnt_names].index('SubFamily')
-    translations = {'BoldCondItal': 'Bold Condensed Italic',
+    translations = {'BoldCond': 'Bold Condensed',
+                    'BoldCondItal': 'Bold Condensed Italic',
                     'BoldItal': 'Bold Italic',
                     'BoldItalic': 'Bold Italic',
                     'BoldOblique': 'Bold Oblique',
