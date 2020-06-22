@@ -156,7 +156,7 @@ def fix_subfamily(font):
         return
 
     print(f'Fixing subfamily: Renaming {sfnt_names[subfamily_index][2]} '
-          'to {new_value}.')
+          f'to {new_value}.')
     sfnt_names[subfamily_index] = (sfnt_names[subfamily_index][0:2] +
                                    (new_value,))
     font.sfnt_names = tuple(sfnt_names)
@@ -179,9 +179,9 @@ def fix_monospaced_font(font):
                   'Fixing...')
             font.removeGlyph(bad_glyph)
         else:
-            print('This is a Monospaced font except for '
-                  '{wrong_width_count} glyphs')
             if wrong_width_count <= 5:
+                print('This is a Monospaced font except for '
+                      f'{wrong_width_count} glyphs:')
                 for glyph in wrong_width_glyphs:
                     print(f'{glyph.glyphname} ({glyph.unicode}): '
                           '{glyph.width}')
