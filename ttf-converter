@@ -211,15 +211,8 @@ def force_monospaced_font(font):
         print(f'{glyph.width}... done')
 
 
-def should_be_forced_monospaced(font):
-    try:
-        family = [x[2] for x in font.sfnt_names if x[1] == 'Family'][0]
-    except IndexError:
-        return False
-    return family == 'Nimbus Mono L'
-
-
-def convert_font(input_filename, output_filename=None, output_dir='.'):
+def convert_font(input_filename, output_filename=None, output_dir='.',
+                 force_monospaced=False):
     font = fontforge.open(input_filename)
 
     if not output_filename:
@@ -234,7 +227,7 @@ def convert_font(input_filename, output_filename=None, output_dir='.'):
 
     fix_subfamily(font)
 
-    if should_be_forced_monospaced(font):
+    if force_monospaced:
         force_monospaced_font(font)
     else:
         fix_monospaced_font(font)
@@ -258,11 +251,16 @@ def main():
                         help='Output directory for generated files')
     parser.add_argument('input_files', nargs='*', default=[],
                         help='Input files')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0.2')
+    parser.add_argument('--force-monospaced', action="store_true",
+                        help='Force the output font to be monospaced by '
+                        'resizing glyphs if needed')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s 1.0.2')
 
     args = parser.parse_args()
 
     input_files = set(args.input_files)
+    force_monospaced = args.force_monospaced
     if args.input_dir:
         input_files.update(get_input_files_from_directory(args.input_dir))
 
@@ -278,7 +276,8 @@ def main():
         print('--------')
         try:
             convert_font(input_file,
-                         output_dir=args.output_dir)
+                         output_dir=args.output_dir,
+                         force_monospaced=force_monospaced)
         except SkipFont:
             print(f'Skipping font {input_file}')
             skipped_filenames.append(input_file)
