@@ -131,7 +131,7 @@ def fix_font(font):
     return True
 
 
-def fix_subfamily(font):
+def fix_subfamily(font, force_subfamily=None):
     sfnt_names = list(font.sfnt_names)
     subfamily_index = [x[1] for x in sfnt_names].index('SubFamily')
     translations = {'BoldCond': 'Bold Condensed',
@@ -153,11 +153,14 @@ def fix_subfamily(font):
                     'StandardSymL': 'Regular'}
     # The last one is for the Standard Symbols L font
 
-    try:
-        new_value = translations[sfnt_names[subfamily_index][2]]
-    except KeyError:
-        # Nothing to fix
-        return
+    if force_subfamily:
+        new_value = force_subfamily
+    else:
+        try:
+            new_value = translations[sfnt_names[subfamily_index][2]]
+        except KeyError:
+            # Nothing to fix
+            return
 
     print(f'Fixing subfamily: Renaming {sfnt_names[subfamily_index][2]} '
           f'to {new_value}.')
@@ -216,8 +219,12 @@ def force_monospaced_font(font):
 
 
 def convert_font(input_filename, output_filename=None, output_dir='.',
-                 force_monospaced=False):
+                 force_monospaced=False,
+                 force_family=None, force_subfamily=None):
     font = fontforge.open(input_filename)
+
+    if force_family:
+        font.fontname = force_family
 
     if not output_filename:
         output_filename = font.fontname + '.ttf'
@@ -229,7 +236,7 @@ def convert_font(input_filename, output_filename=None, output_dir='.',
 
     fix_font(font)
 
-    fix_subfamily(font)
+    fix_subfamily(font, force_subfamily)
 
     if force_monospaced:
         force_monospaced_font(font)
@@ -293,6 +300,10 @@ def convert_bitmap_fonts(input_files, args):
 
     for familyandstyle, filenames in font_filenames.items():
         familyname, stylename = familyandstyle
+        if args.family:
+            familyname = args.family
+        if args.subfamily:
+            stylename = args.subfamily
         fullname = f'{familyname} {stylename}'
         print(f'{fullname}: {filenames}')
         font = fontforge.open(filenames[0])
@@ -307,7 +318,7 @@ def convert_bitmap_fonts(input_files, args):
                 font.importBitmaps(filename)
 
         font.familyname = familyname
-        fix_subfamily(font)
+        fix_subfamily(font, args.subfamily)
 
         output_filename = fullname.replace(' ', '-') + '.otb'
 
@@ -322,6 +333,10 @@ def main():
     parser.add_argument('--input-dir', default=None,
                         help='Read fonts to convert from all *.pf[ab] files '
                         'in this directory')
+    parser.add_argument('--family', default=None,
+                        help='Set family name of the output font')
+    parser.add_argument('--subfamily', default=None,
+                        help='Set subfamily/style name of the output font')
     parser.add_argument('--output-dir', default='.',
                         help='Output directory for generated files')
     parser.add_argument('input_files', nargs='*', default=[],
