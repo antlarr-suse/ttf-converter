@@ -242,6 +242,25 @@ def get_input_files_from_directory(directory):
     return glob(os.path.join(directory, '*.pf[ab]'))
 
 
+def convert_vector_fonts(input_files, args):
+    skipped_filenames = []
+    for input_file in sorted(input_files):
+        print('--------')
+        try:
+            convert_font(input_file,
+                         output_dir=args.output_dir,
+                         force_monospaced=args.force_monospaced)
+        except SkipFont:
+            print(f'Skipping font {input_file}')
+            skipped_filenames.append(input_file)
+
+    if skipped_filenames:
+        print('--------')
+        print('Files that were not converted:')
+        for filename in skipped_filenames:
+            print(filename)
+
+
 def main():
     parser = argparse.ArgumentParser(description="This script converts fonts "
                                      "to ttf format")
@@ -261,7 +280,6 @@ def main():
     args = parser.parse_args()
 
     input_files = set(args.input_files)
-    force_monospaced = args.force_monospaced
     if args.input_dir:
         input_files.update(get_input_files_from_directory(args.input_dir))
 
@@ -272,22 +290,7 @@ def main():
               'is not a directory')
         sys.exit(1)
 
-    skipped_filenames = []
-    for input_file in sorted(input_files):
-        print('--------')
-        try:
-            convert_font(input_file,
-                         output_dir=args.output_dir,
-                         force_monospaced=force_monospaced)
-        except SkipFont:
-            print(f'Skipping font {input_file}')
-            skipped_filenames.append(input_file)
-
-    if skipped_filenames:
-        print('--------')
-        print('Files that were not converted:')
-        for filename in skipped_filenames:
-            print(filename)
+    convert_vector_fonts(input_files, args)
 
 
 if __name__ == '__main__':
