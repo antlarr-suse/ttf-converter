@@ -47,7 +47,7 @@ def fix_duplicated_unicode_points(font):
         seen[glyph.unicode] = (idx, glyph.glyphname)
 
     for glyph in glyphs_to_remove:
-        print(f'Removing glyph {glyph.glyphname}')
+        print(f'Removing glyph {glyph.glyphname} {hex(glyph.unicode)}')
         font.removeGlyph(glyph)
 
 
