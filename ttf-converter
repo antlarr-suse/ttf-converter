@@ -25,6 +25,9 @@ import argparse
 import math
 import psMat
 from glob import glob
+import subprocess
+import tempfile
+import gzip
 
 
 class SkipFont(Exception):
@@ -261,6 +264,58 @@ def convert_vector_fonts(input_files, args):
             print(filename)
 
 
+# get font family name and style name by ftdump
+def get_font_fullname(filename):
+    output = subprocess.check_output('ftdump ' + filename, shell=True)
+
+    output = output.decode('utf8')
+    # only contain one font face
+    assert 'Face number: 1' not in output
+    result = {}
+    for row in output.split('\n'):
+        if ':' in row:
+            key, value = row.split(': ')
+            result[key.strip()] = value.strip()
+
+    familyname, stylename = result['family'], result['style']
+    return (familyname, stylename)
+
+
+def convert_bitmap_fonts(input_files, args):
+    font_filenames = {}
+    output_dir = args.output_dir
+
+    for filename in input_files:
+        if '-ISO8859-' in filename or '-KOI8-' in filename:
+            continue
+        fullname = get_font_fullname(filename)
+        font_filenames.setdefault(fullname, []).append(filename)
+
+    for familyandstyle, filenames in font_filenames.items():
+        familyname, stylename = familyandstyle
+        fullname = f'{familyname} {stylename}'
+        print(f'{fullname}: {filenames}')
+        font = fontforge.open(filenames[0])
+        for filename in filenames[1:]:
+            if filename.endswith('.gz'):
+                with tempfile.NamedTemporaryFile(suffix='.pcf') as tmpfile:
+                    gzipfile = gzip.open(filename)
+                    print(filename, tmpfile.name)
+                    tmpfile.write(gzipfile.read())
+                    font.importBitmaps(tmpfile.name)
+            else:
+                font.importBitmaps(filename)
+
+        font.familyname = familyname
+        fix_subfamily(font)
+
+        output_filename = fullname + '.otb'
+
+        if output_dir:
+            output_filename = os.path.join(output_dir, output_filename)
+        font.generate(output_filename, bitmap_type='otb', flags=("opentype",))
+
+
 def main():
     parser = argparse.ArgumentParser(description="This script converts fonts "
                                      "to ttf format")
@@ -274,6 +329,11 @@ def main():
     parser.add_argument('--force-monospaced', action="store_true",
                         help='Force the output font to be monospaced by '
                         'resizing glyphs if needed')
+
+    parser.add_argument('--bitmap-fonts', action="store_true",
+                        help='Handle all parameters as bitmap fonts and merge'
+                        'different sizes of same families together')
+
     parser.add_argument('--version', action='version',
                         version='%(prog)s 1.0.3')
 
@@ -290,7 +350,10 @@ def main():
               'is not a directory')
         sys.exit(1)
 
-    convert_vector_fonts(input_files, args)
+    if args.bitmap_fonts:
+        convert_bitmap_fonts(input_files, args)
+    else:
+        convert_vector_fonts(input_files, args)
 
 
 if __name__ == '__main__':
