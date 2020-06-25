@@ -142,6 +142,7 @@ def fix_subfamily(font):
                     'DemiBoldItal': 'Demi Bold Italic',
                     'LighItal': 'Light Italic',
                     'MediItal': 'Medium Italic',
+                    'MediumItalic': 'Medium Italic',
                     'ReguCond': 'Regular Condensed',
                     'ReguCondItal': 'Regular Condensed Italic',
                     'ReguItal': 'Regular Italic',
