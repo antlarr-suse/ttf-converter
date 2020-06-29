@@ -28,6 +28,7 @@ from glob import glob
 import subprocess
 import tempfile
 import gzip
+import unicodedata
 
 
 class SkipFont(Exception):
@@ -218,6 +219,29 @@ def force_monospaced_font(font):
         print(f'{glyph.width}... done')
 
 
+def fix_glyph_data(font, shift_unicode_values=[], replace_unicode_values={}):
+    for idx, glyph in enumerate(font.glyphs()):
+        shift = [x[2] for x in shift_unicode_values
+                 if x[0] <= glyph.unicode <= x[1]]
+        if glyph.unicode in replace_unicode_values:
+            corrected_unicode = replace_unicode_values[glyph.unicode]
+        elif shift:
+            corrected_unicode = glyph.unicode + shift[0]
+        elif glyph.glyphname.startswith('$'):
+            corrected_unicode = int(glyph.glyphname[1:], 16)
+        elif glyph.glyphname.startswith('char'):
+            corrected_unicode = int(glyph.glyphname[4:])
+        elif glyph.glyphname.startswith('uni'):
+            corrected_unicode = int(glyph.glyphname[3:],16)
+        else:
+            continue
+
+        glyph.unicode = corrected_unicode
+        try:
+            glyph.glyphname = unicodedata.name(chr(glyph.unicode))
+        except ValueError:
+            print(f'No unicode character name for {glyph.unicode}')
+
 def convert_font(input_filename, output_filename=None, output_dir='.',
                  force_monospaced=False,
                  force_family=None, force_subfamily=None):
@@ -320,6 +344,14 @@ def convert_bitmap_fonts(input_files, args):
         font.familyname = familyname
         fix_subfamily(font, args.subfamily)
 
+        shift_unicode_values = [[int(z,0) for z in x.split(',')]
+                                for x in args.shift_unicode_values]
+        replace_unicode_values = dict([[int(z,0) for z in x.split(',')]
+                                      for x in args.replace_unicode_values])
+
+        if args.fix_glyph_unicode or shift_unicode_values or replace_unicode_values:
+            fix_glyph_data(font, shift_unicode_values, replace_unicode_values)
+
         output_filename = fullname.replace(' ', '-') + '.otb'
 
         if output_dir:
@@ -346,8 +378,25 @@ def main():
                         'resizing glyphs if needed')
 
     parser.add_argument('--bitmap-fonts', action="store_true",
-                        help='Handle all parameters as bitmap fonts and merge'
+                        help='Handle all parameters as bitmap fonts and merge '
                         'different sizes of same families together')
+
+    parser.add_argument('--fix-glyph-unicode', action="store_true",
+                        help='Try to fix unicode points and glyph names based '
+                        'on glyph names containing hexadecimal codes')
+
+    parser.add_argument('--replace-unicode-values', action='append',
+                        default=[],
+                        help='When passed 2 comma separated numbers a,b '
+                        'the glyph with an unicode value of `a` is replaced '
+                        'with the unicode value `b`. '
+                        'Can be used more than once')
+
+    parser.add_argument('--shift-unicode-values', action='append',
+                        default=[],
+                        help='When passed 3 comma separated numbers a,b,c '
+                        'this shifts the unicode values of glyphs between a '
+                        'and b by adding c. Can be used more than once')
 
     parser.add_argument('--version', action='version',
                         version='%(prog)s 1.0.4')
