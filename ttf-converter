@@ -312,6 +312,16 @@ def get_font_fullname(filename):
     return (familyname, stylename)
 
 
+def bitmap_transform_font(font, arguments):
+    funcname, xoff, yoff = arguments.split(',')
+    xoff, yoff = int(xoff), int(yoff)
+
+    if not getattr(font, 'bitmapTransform', None):
+        raise RuntimeError('Please, patch your fontforge build to add the '
+                           'bitmapTransform function if you want to use it')
+    font.bitmapTransform(funcname, xoff, yoff)
+
+
 def convert_bitmap_fonts(input_files, args):
     font_filenames = {}
     output_dir = args.output_dir
@@ -340,6 +350,9 @@ def convert_bitmap_fonts(input_files, args):
                     font.importBitmaps(tmpfile.name)
             else:
                 font.importBitmaps(filename)
+
+        if args.bitmapTransform:
+            bitmap_transform_font(font, args.bitmapTransform)
 
         font.familyname = familyname
         fix_subfamily(font, args.subfamily)
@@ -397,6 +410,12 @@ def main():
                         help='When passed 3 comma separated numbers a,b,c '
                         'this shifts the unicode values of glyphs between a '
                         'and b by adding c. Can be used more than once')
+
+    parser.add_argument('--bitmapTransform', default=None,
+                        help='If used, all glyphs are modified with the '
+                        'transformation function and values passed as '
+                        'parameters (<fliph|flipv|rotate90cw|rotate90ccw|'
+                        'rotate180|skew|transmove>,<xoff>,<yoff>)')
 
     parser.add_argument('--version', action='version',
                         version='%(prog)s 1.0.4')
