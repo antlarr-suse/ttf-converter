@@ -144,13 +144,16 @@ def fix_subfamily(font, force_subfamily=None):
                     'DemiObli': 'Demi Oblique',
                     'DemiBold': 'Demi Bold',
                     'DemiBoldItal': 'Demi Bold Italic',
+                    'DemiBoldItalic': 'Demi Bold Italic',
                     'LighItal': 'Light Italic',
                     'MediItal': 'Medium Italic',
                     'MediumItalic': 'Medium Italic',
+                    'MediumOblique': 'Medium Oblique',
                     'ReguCond': 'Regular Condensed',
                     'ReguCondItal': 'Regular Condensed Italic',
                     'ReguItal': 'Regular Italic',
                     'ReguObli': 'Regular Oblique',
+                    'RegularItalic': 'Regular Italic',
                     'StandardSymL': 'Regular'}
     # The last one is for the Standard Symbols L font
 
