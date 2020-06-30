@@ -342,7 +342,6 @@ def convert_bitmap_fonts(input_files, args):
         if args.subfamily:
             stylename = args.subfamily
         fullname = f'{familyname} {stylename}'
-        print(f'{fullname}: {filenames}')
         font = fontforge.open(filenames[0])
         for filename in filenames[1:]:
             if filename.endswith('.gz'):
@@ -369,6 +368,7 @@ def convert_bitmap_fonts(input_files, args):
             fix_glyph_data(font, shift_unicode_values, replace_unicode_values)
 
         output_filename = fullname.replace(' ', '-') + '.otb'
+        print(f'Converting {" ".join(filenames)} to {output_filename}')
 
         if output_dir:
             output_filename = os.path.join(output_dir, output_filename)
