@@ -1,7 +1,20 @@
 # ttf-converter
-Python script that converts fonts to TrueType format (.ttf)
 
-Note that this script uses the fontforge python bindings, which needs
+This is a Python script that converts fonts to TrueType/OpenType format. It
+uses the FontForge Python bindings to read/process and write any font format.
+Also, as part of the conversion process, the script tries to fix
+inconsistencies and do necessary changes to the font to honor the TTF/OTF
+format specs.
+
+Though TrueType is often used synonymously with outline fonts, it supports
+embedded bitmaps. ttf-converter leaves the glyph kind (outline/bitmapped)
+unchanged.
+
+For converting a font to have scalable outline glyphs, see vfontas instead.
+
+# Dependencies
+
+Note that this script uses the FontForge Python bindings, which need
 to be installed in the system. In SLE / openSUSE Leap / openSUSE
 Tumbleweed, you just need to run:
 
@@ -26,6 +39,6 @@ If you want to convert all fonts in a directory, use it like:
  ttf-converter --input-dir /usr/share/fonts/Type1 --output-dir generated
  ```
  
- That will read all *.pfa/*.pfb files in the `/usr/share/fonts/Type1`
+ This will read all *.pfa/*.pfb files in the `/usr/share/fonts/Type1`
  directory and generate an output file for each of them in the `generated`
  directory (which will be created if needed)
