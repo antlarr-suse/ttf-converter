@@ -96,7 +96,7 @@ def fix_font(font):
             print(f'Font glyph "{glyph.glyphname}" ({idx}) is missing '
                   'extrema. Adding points... ', end='')
             for mode in ('only_good_rm', 'all'):
-                glyph.addExtrema('only_good_rm')
+                glyph.addExtrema(mode)
                 glyph.validate(True)
                 if not glyph.validation_state & 0x20:
                     break
