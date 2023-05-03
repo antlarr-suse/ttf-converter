@@ -209,7 +209,7 @@ def force_monospaced_font(font):
         _null = font.createChar(-1, '.null')
         _null.width = width
     glyphs = list(font.glyphs())
-    for idx, glyph in enumerate(glyphs):
+    for glyph in glyphs:
         if glyph.glyphname in ('.notdef', '.null', 'nonmarkingreturn'):
             glyph.width = width
             continue
@@ -222,8 +222,8 @@ def force_monospaced_font(font):
         print(f'{glyph.width}... done')
 
 
-def fix_glyph_data(font, shift_unicode_values=[], replace_unicode_values={}):
-    for idx, glyph in enumerate(font.glyphs()):
+def fix_glyph_data(font, shift_unicode_values, replace_unicode_values):
+    for glyph in font.glyphs():
         shift = [x[2] for x in shift_unicode_values
                  if x[0] <= glyph.unicode <= x[1]]
         if glyph.unicode in replace_unicode_values:
@@ -235,7 +235,7 @@ def fix_glyph_data(font, shift_unicode_values=[], replace_unicode_values={}):
         elif glyph.glyphname.startswith('char'):
             corrected_unicode = int(glyph.glyphname[4:])
         elif glyph.glyphname.startswith('uni'):
-            corrected_unicode = int(glyph.glyphname[3:],16)
+            corrected_unicode = int(glyph.glyphname[3:], 16)
         else:
             continue
 
@@ -244,6 +244,7 @@ def fix_glyph_data(font, shift_unicode_values=[], replace_unicode_values={}):
             glyph.glyphname = unicodedata.name(chr(glyph.unicode))
         except ValueError:
             print(f'No unicode character name for {glyph.unicode}')
+
 
 def convert_font(input_filename, output_filename=None, output_dir='.',
                  force_monospaced=False,
@@ -359,12 +360,13 @@ def convert_bitmap_fonts(input_files, args):
         font.familyname = familyname
         fix_subfamily(font, args.subfamily)
 
-        shift_unicode_values = [[int(z,0) for z in x.split(',')]
+        shift_unicode_values = [[int(z, 0) for z in x.split(',')]
                                 for x in args.shift_unicode_values]
-        replace_unicode_values = dict([[int(z,0) for z in x.split(',')]
+        replace_unicode_values = dict([[int(z, 0) for z in x.split(',')]
                                       for x in args.replace_unicode_values])
 
-        if args.fix_glyph_unicode or shift_unicode_values or replace_unicode_values:
+        if (args.fix_glyph_unicode or
+                shift_unicode_values or replace_unicode_values):
             fix_glyph_data(font, shift_unicode_values, replace_unicode_values)
 
         output_filename = fullname.replace(' ', '-') + '.otb'
