@@ -346,9 +346,10 @@ def convert_bitmap_fonts(input_files, args):
         for filename in filenames[1:]:
             if filename.endswith('.gz'):
                 with tempfile.NamedTemporaryFile(suffix='.pcf') as tmpfile:
-                    gzipfile = gzip.open(filename)
-                    print(filename, tmpfile.name)
-                    tmpfile.write(gzipfile.read())
+                    with gzip.open(filename) as gzipfile:
+                        print(filename, tmpfile.name)
+                        tmpfile.write(gzipfile.read())
+                        tmpfile.flush()
                     font.importBitmaps(tmpfile.name)
             else:
                 font.importBitmaps(filename)
