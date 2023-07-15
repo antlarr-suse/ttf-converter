@@ -390,7 +390,7 @@ def main():
                         help='Set subfamily/style name of the output font')
     parser.add_argument('--output-dir', default='.',
                         help='Output directory for generated files')
-    parser.add_argument('input_files', nargs='*', default=[],
+    parser.add_argument('input_files', nargs='+', default=[],
                         help='Input files')
     parser.add_argument('--force-monospaced', action="store_true",
                         help='Force the output font to be monospaced by '
